@@ -36,6 +36,51 @@ cp -r know-your-place ~/.claude/skills/
 
 Any agent that supports the `SKILL.md` format can load it from its skills directory. For agents that don't, paste the contents of `SKILL.md` into the agent's instruction file (for example `AGENTS.md`).
 
+## Make it stick
+
+A skill is still just text instructions, so obviously clankers can ignore it (why the hell should we even follow the instructions, right?). These two steps give you a better result.
+
+### 1. Turn off Claude Code's built-in attribution
+
+Add this to `~/.claude/settings.json` (all projects) or `.claude/settings.json` (one project):
+
+```json
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
+}
+```
+
+Empty strings stop Claude Code from asking the agent to add the co-author trailer to commits and the "Generated with Claude Code" footer to pull requests. Without that request, the skill has nothing to fight against.
+
+### 2. Install the `commit-msg` git hook
+
+[`hooks/commit-msg.py`](hooks/commit-msg.py) is a safety net that doesn't depend on the agent. Git runs it on every commit, and it removes AI co-author trailers (`Co-Authored-By: Claude …`, `Assisted-by: …`) and "Generated with …" footers from the message. It never changes the subject line, and it keeps trailers that credit humans. It needs Python 3.9 or later.
+
+One repository:
+
+```bash
+cp hooks/commit-msg.py /path/to/repo/.git/hooks/commit-msg
+chmod +x /path/to/repo/.git/hooks/commit-msg
+```
+
+Every repository you create or clone from now on:
+
+```bash
+mkdir -p ~/.git-templates/hooks
+
+cp hooks/commit-msg.py ~/.git-templates/hooks/commit-msg
+chmod +x ~/.git-templates/hooks/commit-msg
+
+git config --global init.templateDir ~/.git-templates
+```
+
+To add the hook to an existing repository, run `git init` inside it. Git keeps your existing hooks and doesn't overwrite them.
+
+The hook only cleans commit messages. It doesn't run on `git commit --no-verify`, and it can't touch pull request descriptions. Step 1 and the skill cover those.
+
 ## How it works
 
 Before every commit, pull request or publish, the agent:
